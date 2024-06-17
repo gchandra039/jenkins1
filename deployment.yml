@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: myapp-test
-        image: chandrag139/testapp:22
+        image: chandrag139/testapp:latest
         ports:
         - containerPort: 5000
 ---
