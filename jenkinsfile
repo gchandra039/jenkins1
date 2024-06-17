@@ -1,0 +1,66 @@
+pipeline{
+  agent any
+  environment{
+    docker_username="chandrag139"
+    app_name="testapp"
+    tag_name="${BUILD_NUMBER}"
+    image_name="${docker_username}" + "/" + "${app_name}"
+    docker_regisryc='DockerHub'
+  }
+
+  stages{
+    stage('checkOut'){
+      steps{
+        git branch: 'main', credentialsId: 'gitHub', url: 'https://github.com/gchandra039/jenkins1.git'
+      }
+    }
+    stage('docker image build'){
+      steps{
+        script{
+          docker_image=docker.build "${image_name}"
+        }
+      }
+    }
+    stage('push image'){
+      steps{
+        script{
+          docker.withRegistry('',docker_regisryc){
+            docker_image.push("$BUILD_NUMBER")
+            docker_image.push('latest')
+          }
+        }
+      }
+    }
+    stage('delete image'){
+        steps{
+            script{
+                sh "docker rmi ${image_name}:${tag_name}"
+                sh "docker rmi ${image_name}:latest"
+            }
+        }
+    }
+    stage('change image name to deployment file'){
+        steps{
+          script{
+            sh """
+            sed -i 's/${app_name}.*/${app_name}:${tag_name}/g' deployment.yml 
+            cat deployment.yml
+            """
+          }
+        }
+    }
+    stage('push deployment file'){
+        steps{
+            script{
+                sh """
+                    git add deployment.yml
+                    git commit -m "update deploymenfile"
+                """
+                withCredentials([gitUsernamePassword(credentialsId: 'gitHub', gitToolName: 'Default')]) {
+                sh "git push https://github.com/gchandra039/jenkins1.git main"
+                }
+            }
+        }
+    }
+  }
+}
